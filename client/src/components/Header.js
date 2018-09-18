@@ -2,11 +2,8 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 
-
 class Header extends Component {
-
-
-	renderContent() {
+  renderContent() {
     switch (this.props.auth) {
       case null:
         return;
@@ -28,38 +25,26 @@ class Header extends Component {
     }
   }
 
-
-
-
-
-
-	render(){
-
-		return(
- 			<nav className="indigo">
- 				<div className="nav-wrapper">
- 					<Link
- 						to={this.props.auth ? '/blogs' : '/'}
- 						className="left brand-logo"
- 						style={{ marginLeft: '10px'}}
-
- 					>
- 						Blogster
- 					</Link>
- 					<ul className="right">{this.renderContent()}</ul>
- 				</div>
- 			</nav>
-
-			)
-	}
-
+  render() {
+    return (
+      <nav className="indigo">
+        <div className="nav-wrapper">
+          <Link
+            to={this.props.auth ? '/blogs' : '/'}
+            className="left brand-logo"
+            style={{ marginLeft: '10px' }}
+          >
+            S3Uploads
+          </Link>
+          <ul className="right">{this.renderContent()}</ul>
+        </div>
+      </nav>
+    );
+  }
 }
 
-
-function mapStateToProps({ auth }){
-
+function mapStateToProps({ auth }) {
   return { auth };
-
 }
 
 export default connect(mapStateToProps)(Header);

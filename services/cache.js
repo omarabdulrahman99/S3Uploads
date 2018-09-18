@@ -5,70 +5,48 @@ const keys = require('../config/keys');
 
 const client = redis.createClient(keys.redisUrl);
 client.hget = util.promisify(client.hget);
+const exec = mongoose.Query.prototype.exec;
 
-const exec = mongoose.Query.prototype.exec; //original exec saved here..
+mongoose.Query.prototype.cache = function(options = {}) {
+  this.useCache = true;
+  this.hashKey = JSON.stringify(options.key || '');
 
-mongoose.Query.prototype.cache = function(options = {}){
+  return this;
+};
 
+mongoose.Query.prototype.exec = async function() {
+  if (!this.useCache) {
+    return exec.apply(this, arguments);
+  }
 
-	this.useCache = true;
-	this.hashKey = JSON.stringify(options.key);
+  const key = JSON.stringify(
+    Object.assign({}, this.getQuery(), {
+      collection: this.mongooseCollection.name
+    })
+  );
 
-	return this;
+  // See if we have a value for 'key' in redis
+  const cacheValue = await client.hget(this.hashKey, key);
 
-}
+  // If we do, return that
+  if (cacheValue) {
+    const doc = JSON.parse(cacheValue);
 
+    return Array.isArray(doc)
+      ? doc.map(d => new this.model(d))
+      : new this.model(doc);
+  }
 
-mongoose.Query.prototype.exec = async function(){
+  // Otherwise, issue the query and store the result in redis
+  const result = await exec.apply(this, arguments);
 
+  client.hset(this.hashKey, key, JSON.stringify(result), 'EX', 10, function(blah){});
 
-	if(!this.useCache){
-
-		return exec.apply(this, arguments);
-	}
-
-	const key = JSON.stringify(
-
-		Object.assign({}, this.getQuery(), {
-
-				collection: this.mongooseCollection.name
-
-		})
-    )
-
-
-	const cacheValue = await client.hget(this.hashKey, key);
-
-
-	if(cacheValue){
-
-		const doc = JSON.parse(cacheValue);
-
-
-		//exec has to return a mongoose model
-		return Array.isArray(doc) ? doc.map(d=> new this.model(d) : new this.model(doc) )
-
-
-	}
-
-	const result = await exec.apply(this, arguments);
-	client.hset(this.hashKey, key, JSON.stringify(result), 'EX', 10);
-
-	return result;
-
-
-
-}
-
+  return result;
+};
 
 module.exports = {
-
-
-	clearHash(hashKey){
-
-		client.del(JSON.stringify(hashKey));
-	}
-
-
-
-}
+  clearHash(hashKey) {
+    client.del(JSON.stringify(hashKey));
+  }
+};

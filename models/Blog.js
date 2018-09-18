@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-const blogSchmea = new Schema({
+const blogSchema = new Schema({
 
 
 		title: String,
@@ -12,3 +12,5 @@ const blogSchmea = new Schema({
 
 
 })
+
+mongoose.model('Blog', blogSchema);
